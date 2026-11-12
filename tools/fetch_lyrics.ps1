@@ -1,5 +1,9 @@
-# Fetches timed .lrc lyrics for FlatOut 2's 34 soundtrack tracks (24 unique songs) from LRCLIB
+# Fetches timed .lrc lyrics for FlatOut 2's soundtrack from LRCLIB
 # using pinned record IDs (with search fallback) for deterministic, reproducible output.
+# Stunt copies data/songs2/25.ogg-34.ogg are not fetched: the game seeks into those files
+# and labels every one "Henri". Songs2/35 and 36 are real playlist tracks and are included.
+# Shift (seconds) is added to every timestamp. The game colours words from the <mm:ss> tags,
+# so a file-level [offset:] would not move them.
 #
 # Usage:
 #   powershell -ExecutionPolicy Bypass -File tools\fetch_lyrics.ps1 [-OutDir <scripts\lyrics>] [-PlainLineTimings] [-Force]
@@ -30,34 +34,42 @@ if (-not $OutDir) {
 }
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
 
-# All 34 soundtrack files across data/songs1/*.ogg and data/songs2/*.ogg (12 and 23 do not exist in the game),
-# mapped to their exact LRCLIB record IDs and playlist metadata.
+# Soundtrack files in data/songs1 (01-11, 13-22, 24) and the two songs2 tracks that
+# play in full (35, 36). 12 and 23 do not exist. 25-34 are stunt copies and are removed below.
+# Shift values come from listening against the game's own .ogg (see the notes on each row).
 $tracks = @(
-    @{ Files = @("01");       Id = 2472115; Artist = "The Chelsea Smiles"; Title = "Nowhere Ride";                 QueryTitle = "Nowhere Ride" }
-    @{ Files = @("02");       Id = 56755;   Artist = "Alkaline Trio";      Title = "Fall Victim";                  QueryTitle = "Fall Victim" }
-    @{ Files = @("03", "25"); Id = 5617863; Artist = "Papa Roach";         Title = "Blood Brothers";               QueryTitle = "Blood Brothers" }
-    @{ Files = @("04");       Id = 2472714; Artist = "Supergrass";         Title = "Road To Rouen";                QueryTitle = "Road To Rouen" }
-    @{ Files = @("05", "26"); Id = 3433974; Artist = "Alkaline Trio";      Title = "Mercy Me";                     QueryTitle = "Mercy Me" }
-    @{ Files = @("06");       Id = 8007107; Artist = "Nickelback";         Title = "Believe It or Not";            QueryTitle = "Believe It or Not" }
-    @{ Files = @("07");       Id = 7183014; Artist = "Megadeth";           Title = "Symphony of Destruction";      QueryTitle = "Symphony of Destruction" }
-    @{ Files = @("08");       Id = 3868244; Artist = "Yellowcard";         Title = "Rough Landing Holly";          QueryTitle = "Rough Landing Holly" }
-    @{ Files = @("09");       Id = 5817875; Artist = "Yellowcard";         Title = "Breathing";                    QueryTitle = "Breathing" }
-    @{ Files = @("10", "27"); Id = 3894681; Artist = "Zebrahead";          Title = "Lobotomy for Dummies";         QueryTitle = "Lobotomy for Dummies" }
-    @{ Files = @("11");       Id = 7607404; Artist = "Rise Against";       Title = "Give It All";                  QueryTitle = "Give It All" }
-    @{ Files = @("13", "28"); Id = 7739315; Artist = "Papa Roach";         Title = "Not Listening";                QueryTitle = "Not Listening" }
-    @{ Files = @("14", "29"); Id = 4751673; Artist = "Underoath";          Title = "Reinventing Your Exit";        QueryTitle = "Reinventing Your Exit" }
-    @{ Files = @("15", "30"); Id = 2468210; Artist = "Fall Out Boy";       Title = "7 Minutes In Heaven";          QueryTitle = "7 Minutes In Heaven" }
-    @{ Files = @("16", "31"); Id = 5420449; Artist = "Supergrass";         Title = "Richard III";                  QueryTitle = "Richard III" }
-    @{ Files = @("17", "32"); Id = 8007382; Artist = "Nickelback";         Title = "Flat On the Floor";            QueryTitle = "Flat On the Floor" }
-    @{ Files = @("18", "33"); Id = 7776443; Artist = "Rob Zombie";         Title = "Feel So Numb";                 QueryTitle = "Feel So Numb" }
-    @{ Files = @("19");       Id = 3793654; Artist = "Rob Zombie";         Title = "Demon Speeding";               QueryTitle = "Demon Speeding" }
-    @{ Files = @("20");       Id = 2520349; Artist = "Wolfmother";         Title = "Pyramid";                      QueryTitle = "Pyramid" }
-    @{ Files = @("21", "34"); Id = 5876764; Artist = "Wolfmother";         Title = "Dimension";                    QueryTitle = "Dimension" }
-    @{ Files = @("22");       Id = 3846678; Artist = "Fall Out Boy";       Title = "Snitches, and Talkers Get..."; QueryTitle = "Snitches and Talkers Get Stitches and Walkers" }
-    @{ Files = @("24");       Id = 2469681; Artist = "The Vines";          Title = "Don't Listen To The Radio";    QueryTitle = "Don't Listen To The Radio" }
-    @{ Files = @("35");       Id = 2837104; Artist = "Audioslave";         Title = "Man Or Animal";                QueryTitle = "Man Or Animal" }
-    @{ Files = @("36");       Id = 3815807; Artist = "Audioslave";         Title = "Your Time Has Come";           QueryTitle = "Your Time Has Come" }
+    @{ Files = @("01"); Id = 2472115; Artist = "The Chelsea Smiles"; Title = "Nowhere Ride";                 QueryTitle = "Nowhere Ride" }
+    @{ Files = @("02"); Id = 56755;   Artist = "Alkaline Trio";      Title = "Fall Victim";                  QueryTitle = "Fall Victim" }
+    @{ Files = @("03"); Id = 5617863; Artist = "Papa Roach";         Title = "Blood Brothers";               QueryTitle = "Blood Brothers" }
+    @{ Files = @("04"); Id = 2472714; Artist = "Supergrass";         Title = "Road To Rouen";                QueryTitle = "Road To Rouen" }
+    @{ Files = @("05"); Id = 3433974; Artist = "Alkaline Trio";      Title = "Mercy Me";                     QueryTitle = "Mercy Me" }
+    @{ Files = @("06"); Id = 8007107; Artist = "Nickelback";         Title = "Believe It or Not";            QueryTitle = "Believe It or Not" }
+    @{ Files = @("07"); Id = 7183014; Artist = "Megadeth";           Title = "Symphony of Destruction";      QueryTitle = "Symphony of Destruction" }
+    @{ Files = @("08"); Id = 3868244; Artist = "Yellowcard";         Title = "Rough Landing Holly";          QueryTitle = "Rough Landing Holly" }
+    @{ Files = @("09"); Id = 5817875; Artist = "Yellowcard";         Title = "Breathing";                    QueryTitle = "Breathing" }
+    @{ Files = @("10"); Id = 3894681; Artist = "Zebrahead";          Title = "Lobotomy for Dummies";         QueryTitle = "Lobotomy for Dummies" }
+    @{ Files = @("11"); Id = 7607404; Artist = "Rise Against";       Title = "Give It All";                  QueryTitle = "Give It All" }
+    @{ Files = @("13"); Id = 7739315; Artist = "Papa Roach";         Title = "Not Listening";                QueryTitle = "Not Listening" }
+    @{ Files = @("14"); Id = 4751673; Artist = "Underoath";          Title = "Reinventing Your Exit";        QueryTitle = "Reinventing Your Exit" }
+    @{ Files = @("15"); Id = 2468210; Artist = "Fall Out Boy";       Title = "7 Minutes In Heaven";          QueryTitle = "7 Minutes In Heaven" }
+    # Game cut is 185s against a 193s sync; the first line was heard at ~25s and highlighted at ~29s.
+    @{ Files = @("16"); Id = 5420449; Artist = "Supergrass";         Title = "Richard III";                  QueryTitle = "Richard III"; Shift = -4.0 }
+    @{ Files = @("17"); Id = 8007382; Artist = "Nickelback";         Title = "Flat On the Floor";            QueryTitle = "Flat On the Floor" }
+    # 7776443 is a Spanish sync of a different structure. 604534 is the English album (234s).
+    # The game file is 213.6s and the band enters at 4s, so the album's 19.15s vocal moves there.
+    @{ Files = @("18"); Id = 604534;  Artist = "Rob Zombie";         Title = "Feel So Numb";                 QueryTitle = "Feel So Numb"; Shift = -15.2 }
+    # Album sync is for the 224s Sinister Urge master. The game file is 209.8s and gets loud at 3s.
+    @{ Files = @("19"); Id = 602611;  Artist = "Rob Zombie";         Title = "Demon Speeding";               QueryTitle = "Demon Speeding"; Shift = -13.0 }
+    # Deluxe-edition timestamps (2520349) sit ~2.5s later than the 268s album, which matches the game file.
+    @{ Files = @("20"); Id = 813102;  Artist = "Wolfmother";         Title = "Pyramid";                      QueryTitle = "Pyramid" }
+    @{ Files = @("21"); Id = 5876764; Artist = "Wolfmother";         Title = "Dimension";                    QueryTitle = "Dimension" }
+    # The game .ogg is the same 170s cut plus 1.36s of leading silence, so the album sync was early.
+    @{ Files = @("22"); Id = 3846678; Artist = "Fall Out Boy";       Title = "Snitches, and Talkers Get..."; QueryTitle = "Snitches and Talkers Get Stitches and Walkers"; Shift = 1.36 }
+    @{ Files = @("24"); Id = 2469681; Artist = "The Vines";          Title = "Don't Listen To The Radio";    QueryTitle = "Don't Listen To The Radio" }
+    @{ Files = @("35"); Id = 2837104; Artist = "Audioslave";         Title = "Man Or Animal";                QueryTitle = "Man Or Animal" }
+    @{ Files = @("36"); Id = 3815807; Artist = "Audioslave";         Title = "Your Time Has Come";           QueryTitle = "Your Time Has Come" }
 )
+$stuntCopies = 25..34 | ForEach-Object { "{0:D2}" -f $_ }
 
 $headers = @{ "User-Agent" = "flatout2-vr-lyrics-fetcher/1.0 (https://github.com/Saikava/flatout2-vr)" }
 
@@ -71,19 +83,22 @@ function Format-LrcTime([double]$sec) {
     return [string]::Format($inv, "{0:D2}:{1:D2}.{2:D2}", $mm, $ss, $cs)
 }
 
-function ConvertTo-LrcContent([string]$artist, [string]$title, [string]$synced, [double]$duration, [bool]$plainOnly) {
+function ConvertTo-LrcContent([string]$artist, [string]$title, [string]$synced, [double]$duration, [bool]$plainOnly, [double]$Shift = 0) {
     $parsed = New-Object System.Collections.Generic.List[object]
     foreach ($rawLine in ($synced -replace "`r`n", "`n" -replace "`r", "`n" -split "`n")) {
         if ($rawLine -match '^\[(\d+):(\d+(?:\.\d+)?)\](.*)$') {
             $mm = [double]::Parse($Matches[1], $inv)
             $ss = [double]::Parse($Matches[2], $inv)
+            $at = $mm * 60.0 + $ss + $Shift
+            if ($at -lt 0) { $at = 0 }
             $parsed.Add([PSCustomObject]@{
-                At   = $mm * 60.0 + $ss
+                At   = $at
                 Text = $Matches[3].Trim()
             })
         }
     }
 
+    if ($duration -gt 0) { $duration += $Shift }
     $out = New-Object System.Collections.Generic.List[string]
     $out.Add("[ti:$title]")
     $out.Add("[ar:$artist]")
@@ -192,15 +207,27 @@ foreach ($t in $tracks) {
 
     $rec = Fetch-Record $t
     $dur = if ($null -ne $rec.duration) { [double]$rec.duration } else { 0.0 }
-    $content = ConvertTo-LrcContent -artist $t.Artist -title $t.Title -synced ([string]$rec.syncedLyrics) -duration $dur -plainOnly $PlainLineTimings.IsPresent
+    $shift = 0.0
+    if ($t.ContainsKey("Shift") -and $null -ne $t.Shift) { $shift = [double]$t.Shift }
+    $content = ConvertTo-LrcContent -artist $t.Artist -title $t.Title -synced ([string]$rec.syncedLyrics) -duration $dur -plainOnly $PlainLineTimings.IsPresent -Shift $shift
 
     foreach ($f in $t.Files) {
         $dest = Join-Path $OutDir "$f.lrc"
         [System.IO.File]::WriteAllText($dest, $content, $utf8NoBom)
         $written++
     }
-    Write-Host ("[{0}] {1} - {2} (LRCLIB #{3})" -f ($t.Files -join ","), $t.Artist, $t.Title, $rec.id)
+    $shiftNote = if ($shift -ne 0) { " shift ${shift}s" } else { "" }
+    Write-Host ("[{0}] {1} - {2} (LRCLIB #{3}{4})" -f ($t.Files -join ","), $t.Artist, $t.Title, $rec.id, $shiftNote)
     Start-Sleep -Milliseconds 150
 }
 
-Write-Host "Done: $written written, $skipped already up to date in $OutDir"
+$removed = 0
+foreach ($f in $stuntCopies) {
+    $dest = Join-Path $OutDir "$f.lrc"
+    if (Test-Path $dest) {
+        Remove-Item -Force $dest
+        $removed++
+    }
+}
+
+Write-Host "Done: $written written, $skipped already up to date, $removed stunt copies removed from $OutDir"

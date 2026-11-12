@@ -5,9 +5,8 @@
 #   python tools\preview_lyrics.py --check
 #
 # The Steam and GOG installs keep the songs inside data.bfs (there is no loose
-# data\songs1 folder). Stunt copies (data/songs2) are labelled "Henri" in the game
-# and start part-way through; the player uses the songs1 title for those and can
-# seek to the stunt StartPos. Notes are saved to lyrics-review.json next to the .lrc files.
+# data\songs1 folder). Stunt copies data/songs2/25-34 are omitted. Notes are saved
+# to lyrics-review.json next to the .lrc files.
 
 from __future__ import annotations
 
@@ -341,6 +340,8 @@ def build_tracks(game: Path, lyrics_dir: Path, review_path: Path) -> list:
         if not match:
             continue
         stem = match.group(2)
+        if stem in STUNT_OF:
+            continue
         lrc_path = lyrics_dir / f"{stem}.lrc"
         summary = lrc_summary(read_text(lrc_path)) if lrc_path.is_file() else None
         note = review.get(stem, {})

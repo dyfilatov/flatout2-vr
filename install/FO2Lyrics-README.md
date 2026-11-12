@@ -8,7 +8,7 @@ Works in **flat-screen FlatOut 2** (no VR headset, OpenXR, or DXVK required) and
 
 1. Extract `FlatOut2-Lyrics-<version>.zip` into your `FlatOut 2` game folder (where `FlatOut2.exe` is).
    - If `FlatOut 2 VR` is already installed, overwrite `winmm.dll` (same Ultimate ASI Loader) or keep your existing one.
-2. Fetch timed `.lrc` lyrics for all 34 soundtrack tracks into `scripts\lyrics\`:
+2. Fetch timed `.lrc` lyrics for the 24 full soundtrack tracks into `scripts\lyrics\` (stunt copies `25`–`34` are skipped):
    - Double-click `scripts\fetch_lyrics.cmd`, or run in PowerShell:
 
 ```powershell
@@ -39,7 +39,7 @@ Configured in `scripts\FO2Lyrics.ini`:
 Place custom `.lrc` files in `scripts\lyrics\`. Songs are matched by:
 1. `[file:data/songs1/01.ogg]` tag,
 2. `[ti:...]` title and `[ar:...]` artist tags, or
-3. File name (`01.lrc` for `data/songs1/01.ogg`, `25.lrc` for `data/songs2/25.ogg`).
+3. File name (`01.lrc` for `data/songs1/01.ogg`, `35.lrc` for `data/songs2/35.ogg`).
 
 Both standard `[mm:ss.xx]` line timings and extended `<mm:ss.xx>` word timings are supported, along with `[offset:+200]` (milliseconds) and UTF-8 / UTF-16 encodings. Playlist `StartPos` offsets (stunt events) and race pauses are tracked automatically.
 
