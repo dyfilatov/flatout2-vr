@@ -66,9 +66,8 @@ $tracks = @(
     # The game .ogg is the same 170s cut plus 1.36s of leading silence, so the album sync was early.
     @{ Files = @("22"); Id = 3846678; Artist = "Fall Out Boy";       Title = "Snitches, and Talkers Get..."; QueryTitle = "Snitches and Talkers Get Stitches and Walkers"; Shift = 1.36 }
     @{ Files = @("24"); Id = 2469681; Artist = "The Vines";          Title = "Don't Listen To The Radio";    QueryTitle = "Don't Listen To The Radio" }
-    # Greatest Hits sync (2837104) drifts by up to half a minute from the Out of Exile master.
-    # 20891493 is that master, and its 225.9s duration matches the game file.
-    @{ Files = @("35"); Id = 20891493; Artist = "Audioslave";       Title = "Man Or Animal";                QueryTitle = "Man Or Animal" }
+    # Out of Exile master (20891493). Its first sung line was at 28.13s; in the game file the vocal starts at 23.37s.
+    @{ Files = @("35"); Id = 20891493; Artist = "Audioslave";       Title = "Man Or Animal";                QueryTitle = "Man Or Animal"; Shift = -4.76 }
     @{ Files = @("36"); Id = 3815807; Artist = "Audioslave";         Title = "Your Time Has Come";           QueryTitle = "Your Time Has Come" }
 )
 $stuntCopies = 25..34 | ForEach-Object { "{0:D2}" -f $_ }
@@ -85,17 +84,31 @@ function Format-LrcTime([double]$sec) {
     return [string]::Format($inv, "{0:D2}:{1:D2}.{2:D2}", $mm, $ss, $cs)
 }
 
+function Test-SymbolOnly([string]$text) {
+    foreach ($ch in $text.ToCharArray()) {
+        if ([char]::IsWhiteSpace($ch)) { continue }
+        $c = [int]$ch
+        $music = ($c -ge 0x2669 -and $c -le 0x266F)
+        # UTF-8 for a music note, if a response was read as Latin-1: E2 99 AA.
+        $mojibake = ($c -eq 0x00E2 -or $c -eq 0x0099 -or $c -eq 0x00AA -or $c -eq 0x2122)
+        if (-not $music -and -not $mojibake) { return $false }
+    }
+    return $true
+}
+
 function ConvertTo-LrcContent([string]$artist, [string]$title, [string]$synced, [double]$duration, [bool]$plainOnly, [double]$Shift = 0) {
     $parsed = New-Object System.Collections.Generic.List[object]
     foreach ($rawLine in ($synced -replace "`r`n", "`n" -replace "`r", "`n" -split "`n")) {
         if ($rawLine -match '^\[(\d+):(\d+(?:\.\d+)?)\](.*)$') {
+            $text = $Matches[3].Trim()
+            if (-not [string]::IsNullOrWhiteSpace($text) -and (Test-SymbolOnly $text)) { continue }
             $mm = [double]::Parse($Matches[1], $inv)
             $ss = [double]::Parse($Matches[2], $inv)
             $at = $mm * 60.0 + $ss + $Shift
             if ($at -lt 0) { $at = 0 }
             $parsed.Add([PSCustomObject]@{
                 At   = $at
-                Text = $Matches[3].Trim()
+                Text = $text
             })
         }
     }
@@ -157,7 +170,10 @@ function Invoke-LrcLib([string]$uri) {
     $delays = @(2, 5, 10, 20, 35)
     for ($attempt = 0; ; $attempt++) {
         try {
-            return Invoke-RestMethod -Uri $uri -Headers $headers -Method Get -TimeoutSec 20
+            $resp = Invoke-WebRequest -Uri $uri -Headers $headers -Method Get -TimeoutSec 20 -UseBasicParsing
+            $resp.RawContentStream.Position = 0
+            $json = [System.Text.Encoding]::UTF8.GetString($resp.RawContentStream.ToArray())
+            return $json | ConvertFrom-Json
         } catch {
             $status = $null
             $retryAfter = 0
