@@ -4,6 +4,8 @@ Shows timed lyrics for FlatOut 2's soundtrack in the menus, in races, and in stu
 
 Karaoke also works together with the [FlatOut 2 VR](https://github.com/Saikava/flatout2-vr) mod.
 
+![Karaoke lyrics during a race](https://github.com/dyfilatov/flatout2-lyrics/raw/main/docs/ingame.jpg)
+
 ## Quick start
 
 1. Extract `FlatOut2-Lyrics-<version>.zip` into the FlatOut 2 folder (the one that contains `FlatOut2.exe`). If `winmm.dll` is already there from another ASI mod, keep it.
@@ -43,6 +45,10 @@ Place custom `.lrc` files in `scripts\lyrics\`. Songs are matched by:
 Both standard `[mm:ss.xx]` line timings and extended `<mm:ss.xx>` word timings are supported, along with `[offset:+200]` (milliseconds) and UTF-8 / UTF-16 encodings. Playlist `StartPos` offsets (stunt events) and race pauses are tracked automatically.
 
 Diagnostic log: `scripts\FO2Lyrics.log`. To uninstall, remove `scripts\FO2Lyrics.asi`, `scripts\FO2Lyrics.ini`, `scripts\FO2Lyrics-README.md`, `scripts\FO2Lyrics-licenses\`, `scripts\fetch_lyrics.*`, `scripts\preview_lyrics.*`, `scripts\lyrics_preview.html`, `scripts\lyrics\`, and `winmm.dll` (keep `winmm.dll` if another ASI mod uses it).
+
+## Disclaimer
+
+This mod is vibe-coded and provided "as is", without warranty of any kind. The author shall not be liable for any claim, damages or other liability.
 
 ## License
 
