@@ -66,7 +66,9 @@ $tracks = @(
     # The game .ogg is the same 170s cut plus 1.36s of leading silence, so the album sync was early.
     @{ Files = @("22"); Id = 3846678; Artist = "Fall Out Boy";       Title = "Snitches, and Talkers Get..."; QueryTitle = "Snitches and Talkers Get Stitches and Walkers"; Shift = 1.36 }
     @{ Files = @("24"); Id = 2469681; Artist = "The Vines";          Title = "Don't Listen To The Radio";    QueryTitle = "Don't Listen To The Radio" }
-    @{ Files = @("35"); Id = 2837104; Artist = "Audioslave";         Title = "Man Or Animal";                QueryTitle = "Man Or Animal" }
+    # Greatest Hits sync (2837104) drifts by up to half a minute from the Out of Exile master.
+    # 20891493 is that master, and its 225.9s duration matches the game file.
+    @{ Files = @("35"); Id = 20891493; Artist = "Audioslave";       Title = "Man Or Animal";                QueryTitle = "Man Or Animal" }
     @{ Files = @("36"); Id = 3815807; Artist = "Audioslave";         Title = "Your Time Has Come";           QueryTitle = "Your Time Has Come" }
 )
 $stuntCopies = 25..34 | ForEach-Object { "{0:D2}" -f $_ }
