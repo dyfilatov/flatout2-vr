@@ -1,5 +1,5 @@
-# Packs the standalone karaoke lyrics ASI: FlatOut2-Lyrics-<version>.zip, laid out like the game folder.
-# Works in flat-screen FlatOut 2 on its own and alongside FO2VR.asi in VR.
+# Packs the karaoke lyrics ASI: FlatOut2-Lyrics-<version>.zip, laid out like the game folder.
+# Also works together with the FlatOut 2 VR mod.
 #   powershell -File tools\package_lyrics.ps1 -Version 1.0.0 [-AsiLoader <winmm.dll>] [-Out <folder>]
 param(
     [Parameter(Mandatory = $true)][string]$Version,
@@ -23,8 +23,11 @@ Copy-Item "$repo\build\FO2Lyrics.asi" "$stage\scripts\"
 Copy-Item "$repo\install\FO2Lyrics.ini" "$stage\scripts\"
 Copy-Item "$repo\install\FO2Lyrics-README.md" "$stage\scripts\"
 Copy-Item "$repo\tools\fetch_lyrics.ps1" "$stage\scripts\"
+Copy-Item "$repo\tools\preview_lyrics.py" "$stage\scripts\"
+Copy-Item "$repo\tools\preview_lyrics.cmd" "$stage\scripts\"
+Copy-Item "$repo\tools\lyrics_preview.html" "$stage\scripts\"
 Set-Content -Path "$stage\scripts\fetch_lyrics.cmd" -Encoding ASCII -Value "@echo off`r`npowershell -NoProfile -ExecutionPolicy Bypass -File `"%~dp0fetch_lyrics.ps1`" %*`r`nif errorlevel 1 pause`r`n"
-Copy-Item "$repo\LICENSE" "$stage\scripts\FO2Lyrics-licenses\FO2VR.txt"
+Copy-Item "$repo\LICENSE" "$stage\scripts\FO2Lyrics-licenses\FO2Lyrics.txt"
 Copy-Item "$repo\install\licenses\Ultimate-ASI-Loader.txt" "$stage\scripts\FO2Lyrics-licenses\"
 
 $zip = Join-Path $Out "FlatOut2-Lyrics-$Version.zip"

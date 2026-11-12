@@ -212,18 +212,21 @@ Section `[Lyrics]` of `scripts\FO2VR.ini` (or `scripts\FO2Lyrics.ini` when using
 | `Colour` | 2828FF | The words not yet sung, `0xBBGGRR` hex (FlatOut 2 red) |
 | `SungColour` | 00D7FF | The words already sung, `0xBBGGRR` hex (FlatOut 2 yellow) |
 
-The mod ships no lyrics files (song lyrics belong to their authors). To fetch timed `.lrc` files for all
-34 soundtrack tracks into `scripts\lyrics\`, run:
+The mod ships no lyrics files (song lyrics belong to their authors). To fetch timed `.lrc` files for the
+24 full soundtrack tracks into `scripts\lyrics\`, run:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File tools\fetch_lyrics.ps1 -OutDir "C:\Path\To\FlatOut 2\scripts\lyrics"
 ```
 
 When run from a repository checked out inside the game folder, `-OutDir` defaults to `..\scripts\lyrics`
-(pass `-PlainLineTimings` to omit word-by-word `<mm:ss.xx>` interpolation, or `-Force` to re-fetch). You
-can also place your own `.lrc` files in `scripts\lyrics\`, matched to each track by `[file:]`, by `[ti:]`
-title and `[ar:]` artist tags, or by file name (`01.lrc` for `data/songs1/01.ogg`, `25.lrc` for
-`data/songs2/25.ogg`).
+(pass `-PlainLineTimings` to omit word-by-word `<mm:ss.xx>` interpolation, or `-Force` to re-fetch). To hear
+each track against its `.lrc` before starting the game, run `tools\preview_lyrics.cmd` (Python 3). It reads
+the soundtrack out of `data.bfs` — the install has no loose `data\songs1` folder — plays the `.ogg`, and
+highlights the lyrics in time. Mark a song wrong and the note is saved to `lyrics-review.json` next to the
+`.lrc` files. Stunt copies `data/songs2/25.ogg`–`34.ogg` are not fetched. You can also place your own `.lrc` files in `scripts\lyrics\`, matched to each track by `[file:]`, by `[ti:]`
+title and `[ar:]` artist tags, or by file name (`01.lrc` for `data/songs1/01.ogg`, `35.lrc` for
+`data/songs2/35.ogg`).
 
 Lyrics work in VR (drawn on the HUD panel at `HudDistance`, or projected in 3D stereo onto the same plane
 when `Hud=0`), on a flat screen with `[VR] Enabled=0`, or as a separate standalone ASI mod
