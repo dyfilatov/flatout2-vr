@@ -55,11 +55,11 @@ $tracks = @(
     # Game cut is 185s against a 193s sync; the first line was heard at ~25s and highlighted at ~29s.
     @{ Files = @("16"); Id = 5420449; Artist = "Supergrass";         Title = "Richard III";                  QueryTitle = "Richard III"; Shift = -4.0 }
     @{ Files = @("17"); Id = 8007382; Artist = "Nickelback";         Title = "Flat On the Floor";            QueryTitle = "Flat On the Floor" }
-    # 7776443 is a Spanish sync of a different structure. 604534 is the English album (234s).
-    # The game file is 213.6s and the band enters at 4s, so the album's 19.15s vocal moves there.
-    @{ Files = @("18"); Id = 604534;  Artist = "Rob Zombie";         Title = "Feel So Numb";                 QueryTitle = "Feel So Numb"; Shift = -15.2 }
-    # Album sync is for the 224s Sinister Urge master. The game file is 209.8s and gets loud at 3s.
-    @{ Files = @("19"); Id = 602611;  Artist = "Rob Zombie";         Title = "Demon Speeding";               QueryTitle = "Demon Speeding"; Shift = -13.0 }
+    # 7776443 is a Spanish sync. 604534 is the English album; its first vocal is at 19.15s
+    # and the game edit sings that line from the start.
+    @{ Files = @("18"); Id = 604534;  Artist = "Rob Zombie";         Title = "Feel So Numb";                 QueryTitle = "Feel So Numb"; Shift = -19.15 }
+    # Album sync is for the 224s master (first line 16.03s). In the game that line is at the start.
+    @{ Files = @("19"); Id = 602611;  Artist = "Rob Zombie";         Title = "Demon Speeding";               QueryTitle = "Demon Speeding"; Shift = -16.03 }
     # Deluxe-edition timestamps (2520349) sit ~2.5s later than the 268s album, which matches the game file.
     @{ Files = @("20"); Id = 813102;  Artist = "Wolfmother";         Title = "Pyramid";                      QueryTitle = "Pyramid" }
     @{ Files = @("21"); Id = 5876764; Artist = "Wolfmother";         Title = "Dimension";                    QueryTitle = "Dimension" }
