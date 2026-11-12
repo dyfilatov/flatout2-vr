@@ -82,21 +82,33 @@ struct Config
     float vrWheelTurn = 90.0f;        // GrabWheel: the hands' turn for full lock, degrees
     float vrWheelRange = 0.0f;        // a steering wheel's turn from lock to lock, degrees: the cockpit's wheel turns as it (0 = as the car's steering)
     float vrEngineRumble = 0.0f;      // the engine's revs and throttle as a steady vibration, this strong (0 = none)
+    // [Lyrics]
+#ifdef FO2_LYRICS_STANDALONE
+    bool lyricsEnabled = true;       // standalone FO2Lyrics.asi defaults to enabled (FO2Lyrics.ini: Lyrics=1)
+#else
+    bool lyricsEnabled = false;      // integrated FO2VR.asi defaults to off (FO2VR.ini: Lyrics=0)
+#endif
+    int lyricsLines = 3;             // how many lines show at once (1..6)
+    float lyricsScale = 1.0f;        // the text's size, this many times as tall
+    float lyricsY = 0.82f;           // in-race vertical position on UI (0.0 = top, 1.0 = bottom; default 0.82)
+    uint32_t lyricsColour = 0x002828FF;      // the words not yet sung (FlatOut 2 game red, 0x00BBGGRR)
+    uint32_t lyricsSungColour = 0x0000D7FF;  // the words already sung / when to sing (FlatOut 2 yellow, 0x00BBGGRR)
     // [Log]
     float logIntervalSeconds = 2.0f;
     // [Keys]
     int keyScreenshot = 0x7A;  // F11
     int keyRecenter = 0x77;    // F8
     int keyHud = 0x78;         // F9: Hud 1 <-> 2
+    int keyLyrics = 0x79;      // F10: lyrics on/off
     // [VR] CameraOffset while held (the numeric keypad: 8 2 4 6, + -), and back to 0 (5)
     int keyCameraUp = 0x68, keyCameraDown = 0x62, keyCameraLeft = 0x64, keyCameraRight = 0x66;
     int keyCameraForward = 0x6B, keyCameraBack = 0x6D, keyCameraReset = 0x65;
 };
 extern Config g_cfg;
-void LoadConfig();
+void LoadConfig(const wchar_t* iniFile = L"FO2VR.ini");
 // Writes [VR] CameraOffset to the ini (the camera keys changed it).
 void SaveCameraOffset();
-// Sets a key's value in FO2VR.ini where it stands, keeping the comment after it.
+// Sets a key's value in the active ini where it stands, keeping the comment after it.
 void SaveIniValue(const char* section, const char* key, const char* value);
 // [VR] StartInCockpit: the game's race camera put inside the car, once (at the start, before the game reads its settings).
 void StartInCockpit();

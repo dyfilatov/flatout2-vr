@@ -3,6 +3,7 @@
 #include "d3dcreate.h"
 #include "game.h"
 #include "largeaddress.h"
+#include "lyrics.h"
 #include "pacing.h"
 #include "record.h"
 #include "render.h"
@@ -99,11 +100,14 @@ static void Init()
     InstallBackground();
     InstallControllers();
     InstallSound();
+    lyrics::Install();
     rec::Install();
     StartInCockpit();
     PutAwayOldDxvk();
     if (g_cfg.vrEnabled) InstallExitHook();
     if (g_cfg.vrEnabled || BackgroundMode()) Log("Direct3DCreate9 hook %s", InstallCreateHook() ? "installed" : "FAILED");
+    Log("config: Lyrics %d (%d lines, scale %.2f, y %.2f, colours %06X/%06X, key %d)", g_cfg.lyricsEnabled ? 1 : 0, g_cfg.lyricsLines,
+        g_cfg.lyricsScale, g_cfg.lyricsY, g_cfg.lyricsColour, g_cfg.lyricsSungColour, g_cfg.keyLyrics);
 }
 
 BOOL WINAPI DllMain(HINSTANCE inst, DWORD reason, LPVOID)

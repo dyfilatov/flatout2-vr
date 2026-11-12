@@ -15,6 +15,7 @@ Config g_cfg;
 namespace {
 FILE* g_log;
 std::mutex g_logMutex;
+std::wstring g_iniFile = L"FO2VR.ini";
 }  // namespace
 
 void LogInit(const std::wstring& path)
@@ -105,9 +106,19 @@ static float IniFloat(const wchar_t* ini, const wchar_t* sec, const wchar_t* key
     return buf[0] ? (float)_wtof(buf) : def;
 }
 
-void LoadConfig()
+void LoadConfig(const wchar_t* iniFile)
 {
-    std::wstring ini = ModuleDir() + L"FO2VR.ini";
+    g_iniFile = iniFile && *iniFile ? iniFile : L"FO2VR.ini";
+    std::wstring ini = ModuleDir() + g_iniFile;
+    if (g_iniFile != L"FO2VR.ini" && GetFileAttributesW(ini.c_str()) == INVALID_FILE_ATTRIBUTES)
+    {
+        std::wstring fallback = ModuleDir() + L"FO2VR.ini";
+        if (GetFileAttributesW(fallback.c_str()) != INVALID_FILE_ATTRIBUTES)
+        {
+            g_iniFile = L"FO2VR.ini";
+            ini = fallback;
+        }
+    }
     const wchar_t* p = ini.c_str();
     Config d;
     g_cfg.autoShotSeconds = IniFloat(p, L"Test", L"AutoShotSeconds", d.autoShotSeconds);
@@ -194,10 +205,25 @@ void LoadConfig()
     float range = IniFloat(p, L"VR", L"WheelRange", d.vrWheelRange);
     g_cfg.vrWheelRange = range > 0 ? std::clamp(range, 90.0f, 3600.0f) : 0.0f;
     g_cfg.vrEngineRumble = std::clamp(IniFloat(p, L"VR", L"EngineRumble", d.vrEngineRumble), 0.0f, 1.0f);
+    // [Lyrics]
+    g_cfg.lyricsEnabled = GetPrivateProfileIntW(L"Lyrics", L"Lyrics", d.lyricsEnabled, p) != 0;
+    g_cfg.lyricsLines = std::clamp((int)GetPrivateProfileIntW(L"Lyrics", L"Lines", d.lyricsLines, p), 1, 6);
+    g_cfg.lyricsScale = std::clamp(IniFloat(p, L"Lyrics", L"Scale", d.lyricsScale), 0.5f, 3.0f);
+    g_cfg.lyricsY = std::clamp(IniFloat(p, L"Lyrics", L"Y", d.lyricsY), 0.1f, 0.95f);
+    {
+        wchar_t buf[16] = L"";
+        GetPrivateProfileStringW(L"Lyrics", L"Colour", L"", buf, 16, p);
+        unsigned colour = buf[0] ? (unsigned)wcstoul(buf, nullptr, 16) : d.lyricsColour;
+        g_cfg.lyricsColour = colour ? colour : d.lyricsColour;
+        GetPrivateProfileStringW(L"Lyrics", L"SungColour", L"", buf, 16, p);
+        colour = buf[0] ? (unsigned)wcstoul(buf, nullptr, 16) : d.lyricsSungColour;
+        g_cfg.lyricsSungColour = colour ? colour : d.lyricsSungColour;
+    }
     g_cfg.keyRecenter = GetPrivateProfileIntW(L"Keys", L"Recenter", d.keyRecenter, p);
     g_cfg.logIntervalSeconds = IniFloat(p, L"Log", L"IntervalSeconds", d.logIntervalSeconds);
     g_cfg.keyScreenshot = GetPrivateProfileIntW(L"Keys", L"Screenshot", d.keyScreenshot, p);
     g_cfg.keyHud = GetPrivateProfileIntW(L"Keys", L"Hud", d.keyHud, p);
+    g_cfg.keyLyrics = GetPrivateProfileIntW(L"Keys", L"Lyrics", d.keyLyrics, p);
     g_cfg.keyCameraUp = GetPrivateProfileIntW(L"Keys", L"CameraUp", d.keyCameraUp, p);
     g_cfg.keyCameraDown = GetPrivateProfileIntW(L"Keys", L"CameraDown", d.keyCameraDown, p);
     g_cfg.keyCameraLeft = GetPrivateProfileIntW(L"Keys", L"CameraLeft", d.keyCameraLeft, p);
@@ -221,7 +247,7 @@ void SaveCameraOffset()
 // file is added at the end of its section (WritePrivateProfileString, which on its own would write the comment off).
 void SaveIniValue(const char* section, const char* key, const char* value)
 {
-    std::wstring path = ModuleDir() + L"FO2VR.ini";
+    std::wstring path = ModuleDir() + g_iniFile;
     std::string text;
     if (FILE* f = _wfopen(path.c_str(), L"rb"))
     {

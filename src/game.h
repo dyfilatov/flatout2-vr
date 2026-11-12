@@ -32,6 +32,14 @@ constexpr uintptr_t kEnginePresent = 0x5A6170;
 // __thiscall(int x, int y, int w, int h, int view) -> IDirect3DDevice9::SetViewport, ret 0x14
 constexpr uintptr_t kSlotSetViewport = kDeviceD3dVtbl + 0x30;
 constexpr uintptr_t kSetViewport = 0x5A5710;
+// __thiscall(): flushes queued screen sprites (slot +0x5C) and calls IDirect3DDevice9::EndScene
+constexpr uintptr_t kSlotEndFrame = kDeviceD3dVtbl + 0x44;
+constexpr uintptr_t kEndFrame = 0x5AACB0;
+constexpr int kSlotFlushSprites = 0x5C;  // __thiscall(int mode), ret 4 (calls 0x5AB5D0)
+// DeviceD3d's reset helper (0x5A6210, called from Present on D3DERR_DEVICENOTRESET) releases the
+// engine's D3DPOOL_DEFAULT state by calling kPreReset at kPreResetCall before IDirect3DDevice9::Reset.
+constexpr uintptr_t kPreResetCall = 0x5A6213;
+constexpr uintptr_t kPreReset = 0x5A6280;
 // __thiscall(const float* camMatrix): builds the view matrix (kViewMatrix), ret 4
 constexpr uintptr_t kSlotSetCamera = kDeviceD3dVtbl + 0xAC;
 constexpr uintptr_t kSetCamera = 0x5A6F50;
@@ -596,6 +604,45 @@ constexpr uintptr_t kKeysHeld = 0x8DA740;    // int
 // ---- sound -------------------------------------------------------------------------------------
 // The game's import of GetProcAddress, through which its sound (FMOD 3.75, built in) gets DirectSoundCreate8.
 constexpr uintptr_t kIatGetProcAddress = 0x6521C8;
+
+// ---- music --------------------------------------------------------------------------------------
+// The game's music (FMOD 3.75, built into the exe) plays one of three playlists: 1 in the menus and the
+// title screen (data/music/playlist_title.bed), 2 in races (playlist_ingame.bed), 3 in stunt events
+// (playlist_stunt.bed; File, Artist, Song, StartPos for each entry, preloaded into memory when the
+// playlist is opened). The playlist advances in 0x41D5D0 (called every frame while a playlist is loaded):
+// it stops the current song (0x41DA80), sets kMusicSeekTime / kMusicSeekMs when starting from StartPos
+// (stunts), then calls MusicPlay from one of these three sites, one per playlist (eax the playlist's id,
+// ecx the preloaded .ogg buffer's length in bytes, the buffer's pointer on the stack, bl whether it loops;
+// cdecl - the caller cleans the one pushed argument). MusicPlay opens the stream from memory (0x619790),
+// plays it, seeks to kMusicSeekMs (0x619AC7) when kMusicSeekTime is set, and stores: the playlist's id
+// (int, 1..3), the stream, the channel, and its state (int: 0 stopped, 1 playing, 2 playing fading in,
+// 3 playing fading in from a resume, 4 fading out to a stop, 5 paused, 6 ended, 7 restarting). A
+// pause/resume keeps the song (only the state changes), so a song's position is its start position plus
+// the time spent in the playing states.
+constexpr uintptr_t kMusicPlay = 0x41CB60;
+constexpr uintptr_t kMusicPlayCall[3] = { 0x41D960, 0x41D7F2, 0x41D6C0 };  // 1 menus, 2 races, 3 stunts
+constexpr uintptr_t kMusicPlaylist = 0x8DA4B0;  // int: 1 menus, 2 races, 3 stunts
+constexpr uintptr_t kMusicState = 0x8DA4BC;     // int (see above)
+constexpr uintptr_t kMusicSeekTime = 0x8DA4D0;  // int: nonzero when MusicPlay seeks to kMusicSeekMs
+constexpr uintptr_t kMusicSeekMs = 0x8DA4E0;    // int: start position in milliseconds
+// Each loaded playlist's vector (begin at +0, end at +4) of kPlaylistEntrySize-byte entries, in id order:
+// 1 menus (0x8DA844), 2 races (0x8DA838), 3 stunts (0x8DA82C).
+constexpr uintptr_t kPlaylistBegin[3] = { 0x8DA844, 0x8DA838, 0x8DA82C };
+constexpr int kPlaylistEntrySize = 0x60;
+constexpr int kPlaylistFile = 0x00;      // MSVC std::string ("data/songs1/01.ogg")
+constexpr int kPlaylistArtist = 0x1C;    // MSVC std::string ("Henri" in stunts)
+constexpr int kPlaylistSong = 0x38;      // MSVC std::string ("Henri" in stunts)
+constexpr int kPlaylistStartPos = 0x54;  // int, milliseconds
+constexpr int kPlaylistData = 0x58;      // const void*, preloaded .ogg bytes
+constexpr int kPlaylistDataLen = 0x5C;   // int, byte length of kPlaylistData
+// MSVC 7.1 std::string layout (used in playlist entries and mesh node names): text in place at +4 when
+// capacity < 16, else a char* at +4; length at +0x14, capacity at +0x18.
+constexpr int kStrBuf = 0x04;
+constexpr int kStrSize = 0x14;
+constexpr int kStrCap = 0x18;
+// What the game's music banner shows (the menus' and the races' playlists fill the artist and the song;
+// in stunts both point at an empty string): the entry's index in its playlist, the artist, the song.
+constexpr uintptr_t kMusicBanner = 0x6B2C40;   // int; char* artist at +4, char* song at +8
 
 // ---- exit ----------------------------------------------------------------------------------------
 // The game's import of ExitProcess (the same in the Steam release's FlatOut2.exe). Closing its window (Alt+F4, or Quit in

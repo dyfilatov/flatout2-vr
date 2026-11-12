@@ -12,6 +12,7 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 # Game folder to install into (scripts\ is loaded by the ASI loader). Defaults to the parent of
 # this repository.
 set(FO2_GAME_DIR "${CMAKE_SOURCE_DIR}/.." CACHE PATH "FlatOut 2 install folder")
+option(FO2_INSTALL_LYRICS_ASI "Also copy standalone FO2Lyrics.asi into scripts/ on build" OFF)
 
 set(OPENXR_DIR "${CMAKE_SOURCE_DIR}/third_party/openxr")
 set(VULKAN_DIR "${CMAKE_SOURCE_DIR}/third_party/vulkan")
@@ -25,6 +26,7 @@ add_library(FO2VR SHARED
   src/eyeshare.cpp
   src/fo2vr.manifest
   src/largeaddress.cpp
+  src/lyrics.cpp
   src/pacing.cpp
   src/profile.cpp
   src/record.cpp
@@ -41,6 +43,19 @@ target_compile_options(FO2VR PRIVATE /W4 /permissive- /utf-8)
 # The OpenXR loader sits next to the ASI (scripts\), not next to the game: it is loaded by full path and its
 # functions are taken through xrGetInstanceProcAddr (src/xr.cpp, which may load the runtime without it).
 target_link_options(FO2VR PRIVATE /SAFESEH:NO)
+
+# Standalone karaoke lyrics ASI (FO2Lyrics.asi): runs on flat screen without OpenXR/DXVK, and works
+# alongside FO2VR.asi by drawing in the game's 2D pass before EndScene (captured onto FO2VR's HUD panel).
+add_library(FO2Lyrics SHARED
+  src/fo2vr.manifest
+  src/lyrics.cpp
+  src/lyrics_dllmain.cpp
+  src/util.cpp
+)
+set_target_properties(FO2Lyrics PROPERTIES SUFFIX ".asi")
+target_compile_definitions(FO2Lyrics PRIVATE FO2_LYRICS_STANDALONE=1 WIN32_LEAN_AND_MEAN NOMINMAX _CRT_SECURE_NO_WARNINGS UNICODE _UNICODE)
+target_compile_options(FO2Lyrics PRIVATE /W4 /permissive- /utf-8)
+target_link_options(FO2Lyrics PRIVATE /SAFESEH:NO)
 
 # Keep the build stamp in the log current.
 add_custom_command(TARGET FO2VR PRE_BUILD COMMAND ${CMAKE_COMMAND} -E touch "${CMAKE_SOURCE_DIR}/src/util.cpp")
@@ -59,6 +74,15 @@ add_custom_command(TARGET FO2VR POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy_if_different "${OPENXR_DIR}/bin/openxr_loader.dll" "${FO2_GAME_DIR}/scripts/"
   COMMENT "Installing FO2VR.asi into ${FO2_GAME_DIR}/scripts"
 )
+
+if(FO2_INSTALL_LYRICS_ASI)
+  add_custom_command(TARGET FO2Lyrics POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${FO2_GAME_DIR}/scripts"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:FO2Lyrics>" "${FO2_GAME_DIR}/scripts/"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_PDB_FILE:FO2Lyrics>" "${FO2_GAME_DIR}/scripts/"
+    COMMENT "Installing FO2Lyrics.asi into ${FO2_GAME_DIR}/scripts"
+  )
+endif()
 
 # Other copies of the game kept on the current build too (e.g. a Steam copy beside the GOG one): their folders, one a
 # line, in extra-game-dirs.txt (not in git; # starts a comment). Each gets what a player installs from a release (not

@@ -1,2 +1,5 @@
 /build/
 /extra-game-dirs.txt
+/install/lyrics/
+/lyrics/
+*.lrc

@@ -10,6 +10,7 @@
 #include "eyeshare.h"
 #include "game.h"
 #include "largeaddress.h"
+#include "lyrics.h"
 #include "mirrorglass.h"
 #include "pacing.h"
 #include "profile.h"
@@ -1229,6 +1230,7 @@ void ReleaseVrTargets()
     if (g_vrt.screenResolve) g_vrt.screenResolve->Release();
     g_vrt = VrTargets();
     ReleaseHudTargets();
+    lyrics::ReleaseFont();
     g_gpu.Release();
 }
 
@@ -2232,6 +2234,7 @@ static __declspec(naked) void DynamicBatchDrawHook()
 // is over (PlayerRunOver). The Hud key switches between 1 and 2.
 constexpr int kRaceStateRacing = 8;
 bool g_hudKeyWasDown;
+bool g_lyricsKeyWasDown;
 int g_lastPhysicsSteps, g_framesWithoutStep;
 bool g_hudLeftOut;
 
@@ -2318,6 +2321,13 @@ int __fastcall EnginePresentHook(void* self, void*)
     }
     rec::MenuTick();
     if (!InRace()) ForgetRaceState();
+    {
+        // The songs' clock (lyrics.h): advances while the game's music plays.
+        static double lastTick = 0;
+        double tickNow = NowSeconds();
+        lyrics::Tick(lastTick > 0 ? tickNow - lastTick : 0.0);
+        lastTick = tickNow;
+    }
     if (xr::Available()) NoteFocus(dev);
     if (g_renderViewsEnd > 0)
     {
@@ -2360,6 +2370,28 @@ int __fastcall EnginePresentHook(void* self, void*)
     shot |= (bg & kPollShot) != 0;
     if ((bg & kPollTrace) && g_trace != Trace::Running) g_trace = Trace::Armed;
     if (KeyPressed(g_cfg.keyHud, g_hudKeyWasDown) || (bg & kPollHud)) ToggleHud();
+    if (lyrics::Active() && KeyPressed(g_cfg.keyLyrics, g_lyricsKeyWasDown)) lyrics::Toggle();
+    // Flat-screen mode ([VR] Enabled=0), VR menus, and VR races without a HUD panel or eye mirror:
+    // draw lyrics onto the back buffer (in VR menus SubmitVrScreen copies it to the virtual screen too).
+    if (lyrics::Active() && g_cfg.lyricsEnabled && lyrics::CurrentShow().count > 0 && dev->TestCooperativeLevel() == D3D_OK &&
+        (!g_eyesPending || ((!g_cfg.vrHud || g_hudLeftOut) && !g_cfg.vrMirror)))
+    {
+        IDirect3DSurface9* bb = nullptr;
+        if (SUCCEEDED(dev->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, &bb)) && bb)
+        {
+            D3DSURFACE_DESC d = {};
+            if (SUCCEEDED(bb->GetDesc(&d)) && d.Width > 0 && d.Height > 0)
+            {
+                IDirect3DSurface9* oldRT = nullptr;
+                dev->GetRenderTarget(0, &oldRT);
+                dev->SetRenderTarget(0, bb);
+                lyrics::Draw(dev, (float)d.Width, (float)d.Height);
+                dev->SetRenderTarget(0, oldRT);
+                if (oldRT) oldRT->Release();
+            }
+            bb->Release();
+        }
+    }
     if (bg & kPollEject) ThrowDriverOut();
     char knockSide;
     int knockState;
@@ -4392,6 +4424,11 @@ void DrawSteadyPanel(IDirect3DDevice9* dev)
 // picture and copied to the headset's panel texture.
 void EndHudCapture(IDirect3DDevice9* dev)
 {
+    if (lyrics::Active() && g_cfg.lyricsEnabled && !g_hudLeftOut && lyrics::CurrentShow().count > 0)
+    {
+        oSetRenderTarget(dev, 0, g_hud.rt);
+        lyrics::Draw(dev, (float)g_hud.w, (float)g_hud.h);
+    }
     g_hud.active = false;
     oSetRenderState(dev, D3DRS_SEPARATEALPHABLENDENABLE, FALSE);
     oSetRenderState(dev, D3DRS_COLORWRITEENABLE, g_hud.gameColorWrite);
@@ -6039,6 +6076,7 @@ bool RenderVrEyes(IDirect3DDevice9* dev, BYTE* ctx, BYTE** cams, float* fovScale
             f.up += py * (float)g_vrt.room[2];
             f.down -= py * (float)g_vrt.room[3];
         }
+    xr::EyeFov panelFov[2] = { fov[0], fov[1] };
     g_steady.eye = pose[0];
     g_steady.eyeFov = fov[0];  // (as the headset shows it: the speed zoom only shrinks what the picture shows)
     if (cockpit) MoveCockpitCards(anchor);
@@ -6186,6 +6224,26 @@ bool RenderVrEyes(IDirect3DDevice9* dev, BYTE* ctx, BYTE** cams, float* fovScale
         prof::TraceDraws(false);  // a frame trace lists the left eye's draws only
         if (cockpit) DrawCockpitCards(dev, cam, eye);
         DrawMarkers(dev, cam);
+        if (lyrics::Active() && g_cfg.lyricsEnabled && (!g_cfg.vrHud || g_hudLeftOut) && lyrics::CurrentShow().count > 0)
+        {
+            lyrics::PanelView pv = {};
+            for (int k = 0; k < 3; k++)
+            {
+                pv.eye[k] = pose[eye].position[k] - g_cfg.vrCameraOffset[k] - g_cfg.testHeadOffset[k];
+                pv.right[k] = pose[eye].right[k];
+                pv.up[k] = pose[eye].up[k];
+                pv.forward[k] = pose[eye].forward[k];
+            }
+            pv.left = panelFov[eye].left;
+            pv.rightTan = panelFov[eye].right;
+            pv.down = panelFov[eye].down;
+            pv.upTan = panelFov[eye].up;
+            pv.panelDist = g_cfg.vrHudDistance;
+            pv.panelWidth = g_cfg.vrHudWidth;
+            pv.panelHeight = g_cfg.vrHudWidth * (g_screenH > 0 && g_screenW > 0 ? (float)g_screenH / (float)g_screenW : 9.0f / 16.0f);
+            pv.panelY = g_cfg.vrHudHeight;
+            lyrics::Draw(dev, (float)g_vrt.w, (float)g_vrt.h, &pv);
+        }
         g_vrEye.active = false;
         IDirect3DSurface9* s = nullptr;
         if (SUCCEEDED(g_vrt.tex[eye]->GetSurfaceLevel(0, &s)))

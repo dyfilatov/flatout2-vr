@@ -37,6 +37,9 @@ without SteamVR? Change one line in the settings: see [Runtimes](#runtimes).
 - **Effects made right for VR**: the sun's glow and lens flare, particle streaks and sparks, the stunt
   cars' jet flames, the speed blur and speed zoom, the colour grading, and the stunt stadium's video
   screens. Each matches in both eyes. Fades to black cover the whole view.
+- **The songs' lyrics, karaoke style**: the words on the HUD panel in VR (or on the screen without VR),
+  brightening as they are sung. Place `.lrc` files in `scripts\lyrics\` or fetch them with
+  `tools\fetch_lyrics.ps1`. See [Lyrics](#lyrics).
 - **Longer view distances** for the headset: full model detail and grass much further out.
   Everything is configurable.
 - **VR controllers and gamepads**: drive with the VR controllers (thumbstick and triggers), and work the
@@ -76,7 +79,7 @@ the runtime itself.
 - `scripts\dxvk_d3d9.dll`: the 32-bit [DXVK](https://github.com/doitsujin/dxvk) (its `d3d9.dll`), which
   the mod needs to hand the game's picture to the headset: the mod loads it for the game in VR (without VR the
   game draws with Windows' Direct3D, as without the mod);
-- `scripts\FO2VR.asi`, `scripts\FO2VR.ini`, `scripts\openxr_loader.dll`, `scripts\wineopenxr.dll`:
+- `scripts\FO2VR.asi`, `scripts\FO2VR.ini`, `scripts\openxr_loader.dll`, and `scripts\wineopenxr.dll`:
   the mod.
 
 To uninstall, delete these files.
@@ -92,6 +95,7 @@ The game's controls are unchanged.
 | --- | --- |
 | F8  | Recenter the view (sit as you want to sit in the car and press it) |
 | F9  | Hide the HUD while racing, or bring it back (it still shows for the countdown, the pause menu and the results); kept for the next game |
+| F10 | Toggle karaoke lyrics on or off; kept for the next game |
 | Numpad 8 2 4 6, + - | Move the view against the car while held: up, down, left, right, forward, back (slowly at first), e.g. to sit a little lower in the cockpit. Numpad 5 puts it back. The view stays where you left it for the next game. Num Lock must be on |
 | F11 | Screenshot of the monitor, both eyes and the HUD (into `scripts\shots\`) |
 
@@ -195,6 +199,59 @@ menus too, as there without the mod (that release's own controller support).
 | `WheelTurn` | 90 | How far your hands turn the wheel for full lock, degrees (at 90 the cockpit's wheel turns with them; more: slower steering) |
 | `WheelRange` | 0 | A steering wheel as the game controller: its range from lock to lock, degrees (as set in its software; 900 for most). The cockpit's steering wheel then turns as yours, up to its lock at 90 degrees either way (see [Steering wheels](#steering-wheels); 0: as the game steers the car, slower and less at speed) |
 
+### Lyrics
+
+Section `[Lyrics]` of `scripts\FO2VR.ini` (or `scripts\FO2Lyrics.ini` when using standalone `FO2Lyrics.asi`):
+
+| Setting | Default | |
+| --- | --- | --- |
+| `Lyrics` | 0 | Show the songs' lyrics, karaoke style (1: on, 0: off; F10 toggles it and writes it here) |
+| `Lines` | 3 | How many lines show at once, the newest at the bottom (1-6) |
+| `Scale` | 1.0 | The text's size, this many times as tall (0.5-3) |
+| `Y` | 0.82 | Vertical position in races (0.1-0.95; 0.82 sits between the rival card and the speedometer) |
+| `Colour` | 2828FF | The words not yet sung, `0xBBGGRR` hex (FlatOut 2 red) |
+| `SungColour` | 00D7FF | The words already sung, `0xBBGGRR` hex (FlatOut 2 yellow) |
+
+The mod ships no lyrics files (song lyrics belong to their authors). To fetch timed `.lrc` files for all
+34 soundtrack tracks into `scripts\lyrics\`, run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\fetch_lyrics.ps1 -OutDir "C:\Path\To\FlatOut 2\scripts\lyrics"
+```
+
+When run from a repository checked out inside the game folder, `-OutDir` defaults to `..\scripts\lyrics`
+(pass `-PlainLineTimings` to omit word-by-word `<mm:ss.xx>` interpolation, or `-Force` to re-fetch). You
+can also place your own `.lrc` files in `scripts\lyrics\`, matched to each track by `[file:]`, by `[ti:]`
+title and `[ar:]` artist tags, or by file name (`01.lrc` for `data/songs1/01.ogg`, `25.lrc` for
+`data/songs2/25.ogg`).
+
+Lyrics work in VR (drawn on the HUD panel at `HudDistance`, or projected in 3D stereo onto the same plane
+when `Hud=0`), on a flat screen with `[VR] Enabled=0`, or as a separate standalone ASI mod
+(`FO2Lyrics.asi` + `FO2Lyrics.ini`, built alongside `FO2VR.asi` and packable with
+`tools\package_lyrics.ps1`), which needs neither OpenXR nor DXVK and also works alongside `FO2VR.asi` by
+drawing in the game's 2D pass before `EndScene`.
+
+Two `.lrc` forms are read: the standard
+
+```
+[ti:Song title]
+[ar:Artist]
+[00:12.34]First line
+[00:15.60]Second line
+```
+
+with one time per line, and the extended `<mm:ss.xx>` form with each word's own time, so the words
+brighten one by one:
+
+```
+[00:12.34]<00:12.34>First <00:12.90>line
+```
+
+`[offset:+200]` shifts the whole file's timings (in ms), and playlist `StartPos` offsets (used by stunt
+events) are applied automatically. UTF-8 (with or without a BOM) and UTF-16 files are read, so Cyrillic
+and any other letters work. While the game's music plays the lines follow its clock: paused with it,
+restarted when the playlist moves to the next song.
+
 ## Troubleshooting
 
 The log, `scripts\FO2VR.log`, usually says what went wrong.
@@ -247,12 +304,14 @@ Something else? [Open an issue](https://github.com/Saikava/flatout2-vr/issues) a
 
 ## Building
 
-Visual Studio 2022 Build Tools (x86, C++), CMake and Ninja: run `build.cmd`. It builds `FO2VR.asi`
-and `wineopenxr.dll` and copies them, with the OpenXR loader, into `..\scripts\`. The repository is
-meant to be checked out inside the game folder.
+Visual Studio 2022 Build Tools (x86, C++), CMake and Ninja: run `build.cmd`. It builds `FO2VR.asi`,
+`FO2Lyrics.asi` (standalone lyrics ASI), and `wineopenxr.dll`, and copies `FO2VR.asi`, `wineopenxr.dll`,
+and the OpenXR loader into `..\scripts\`. The repository is meant to be checked out inside the game
+folder.
 
-`tools\package.ps1 -Version <n>` packs a release archive from the build, with the ASI loader
+`tools\package.ps1 -Version <n>` packs a VR release archive from the build, with the ASI loader
 (`winmm.dll`) and DXVK (`scripts\dxvk_d3d9.dll`) taken from the game folder.
+`tools\package_lyrics.ps1 -Version <n>` packs a standalone `FO2Lyrics` archive.
 
 ## License
 
