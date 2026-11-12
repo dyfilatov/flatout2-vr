@@ -15,7 +15,8 @@ Works in **flat-screen FlatOut 2** (no VR headset, OpenXR, or DXVK required) and
 powershell -ExecutionPolicy Bypass -File scripts\fetch_lyrics.ps1
 ```
 
-3. Start the game (v1.2 GOG or Steam release). Press **F10** at any time to toggle karaoke lyrics on or off.
+3. Optional: check the lyrics against the game's music without launching FlatOut 2. Double-click `scripts\preview_lyrics.cmd` (needs [Python 3](https://www.python.org/downloads/)). It plays each `.ogg` straight out of `data.bfs` and highlights the `.lrc` in time. Mark a song as wrong; the note is saved to `scripts\lyrics\lyrics-review.json`.
+4. Start the game (v1.2 GOG or Steam release). Press **F10** at any time to toggle karaoke lyrics on or off.
 
 > Note: No copyrighted `.lrc` files are bundled in this archive. `fetch_lyrics.ps1` downloads timed lyrics directly from [LRCLIB](https://lrclib.net) onto your machine (pass `-PlainLineTimings` for line-level timestamps without word-by-word interpolation, or `-Force` to re-download).
 
@@ -42,7 +43,7 @@ Place custom `.lrc` files in `scripts\lyrics\`. Songs are matched by:
 
 Both standard `[mm:ss.xx]` line timings and extended `<mm:ss.xx>` word timings are supported, along with `[offset:+200]` (milliseconds) and UTF-8 / UTF-16 encodings. Playlist `StartPos` offsets (stunt events) and race pauses are tracked automatically.
 
-Diagnostic log: `scripts\FO2Lyrics.log`. To uninstall, remove `scripts\FO2Lyrics.asi`, `scripts\FO2Lyrics.ini`, `scripts\FO2Lyrics-README.md`, `scripts\FO2Lyrics-licenses\`, `scripts\fetch_lyrics.*`, `scripts\lyrics\`, and `winmm.dll` (keep `winmm.dll` if using other ASI mods such as `FO2VR.asi`).
+Diagnostic log: `scripts\FO2Lyrics.log`. To uninstall, remove `scripts\FO2Lyrics.asi`, `scripts\FO2Lyrics.ini`, `scripts\FO2Lyrics-README.md`, `scripts\FO2Lyrics-licenses\`, `scripts\fetch_lyrics.*`, `scripts\preview_lyrics.*`, `scripts\lyrics_preview.html`, `scripts\lyrics\`, and `winmm.dll` (keep `winmm.dll` if using other ASI mods such as `FO2VR.asi`).
 
 ## License
 

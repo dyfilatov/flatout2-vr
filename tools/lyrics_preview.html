@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Проверка текстов FlatOut 2</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #101218;
+    --panel: #181c24;
+    --line: #2a3140;
+    --text: #f4f1ea;
+    --muted: #8d95a8;
+    --unsung: #ff4d4d;
+    --sung: #ffd200;
+    --mark: #ff5d73;
+    --ok: #3ecf8e;
+    --warn: #ffb020;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 15px/1.4 "Segoe UI", sans-serif; }
+  button, input, textarea { font: inherit; color: inherit; }
+  button { background: #262c38; border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; cursor: pointer; }
+  button:hover { background: #323948; }
+  button.primary { background: #3a2a12; border-color: #6a4a16; color: var(--sung); }
+  button.danger { background: #3a1820; border-color: #6a2834; }
+  button.on { outline: 2px solid var(--sung); }
+  header { display: flex; gap: 16px; align-items: baseline; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+  header h1 { font-size: 18px; margin: 0; font-weight: 650; }
+  header p { margin: 0; color: var(--muted); font-size: 13px; }
+  .layout { display: grid; grid-template-columns: 360px 1fr; height: calc(100% - 53px); min-height: 0; }
+  .list { border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; background: #141820; }
+  .tools { padding: 10px; display: flex; flex-direction: column; gap: 8px; border-bottom: 1px solid var(--line); }
+  .tools input[type="search"] { width: 100%; background: #0e1116; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chips button { padding: 4px 8px; font-size: 12px; }
+  .chips button.on { background: #2c2616; }
+  .rows { overflow: auto; min-height: 0; }
+  .row { display: block; width: 100%; text-align: left; border: 0; border-bottom: 1px solid #222836; border-radius: 0; background: transparent; padding: 8px 12px; }
+  .row.current { background: #2a2418; }
+  .row .top { display: flex; gap: 8px; align-items: baseline; }
+  .row .num { color: var(--muted); font-variant-numeric: tabular-nums; width: 1.8em; }
+  .row .who { font-weight: 650; }
+  .row .sub { color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .badge { font-size: 11px; border-radius: 999px; padding: 1px 6px; margin-left: 4px; }
+  .badge.bad { background: #4a1822; color: var(--mark); }
+  .badge.warn { background: #3d3014; color: var(--warn); }
+  .badge.stunt { background: #1c2838; color: #9ec1ff; }
+  .stage { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+  .now { padding: 16px 22px 8px; }
+  .now h2 { margin: 0 0 4px; font-size: 26px; }
+  .meta { color: var(--muted); font-size: 13px; }
+  .meta strong { color: var(--text); font-weight: 600; }
+  .warnbox { margin-top: 8px; color: var(--warn); }
+  .transport { display: flex; gap: 8px; align-items: center; padding: 8px 22px; }
+  .transport .time { font-variant-numeric: tabular-nums; color: var(--muted); min-width: 11em; }
+  .seek { flex: 1; position: relative; height: 28px; display: flex; align-items: center; }
+  .seek input { width: 100%; }
+  .tick { position: absolute; top: 2px; width: 2px; height: 10px; background: #9ec1ff; pointer-events: none; }
+  .lyrics { flex: 1; overflow: auto; padding: 8px 8% 32px; min-height: 0; }
+  .lrow { display: grid; grid-template-columns: 76px 1fr; gap: 12px; padding: 4px 8px; border-radius: 8px; cursor: pointer; }
+  .lrow .ts { color: var(--muted); font-variant-numeric: tabular-nums; padding-top: 6px; font-size: 12px; }
+  .lrow.current { background: #241e14; }
+  .lrow .words { font-size: 22px; font-weight: 650; letter-spacing: 0.01em; }
+  .lrow.current .words { font-size: 30px; }
+  .w { color: var(--unsung); white-space: pre-wrap; }
+  .w.sung { color: var(--sung); }
+  .empty { color: var(--muted); }
+  .review { border-top: 1px solid var(--line); padding: 12px 22px 16px; display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: start; }
+  .review textarea { width: 100%; min-height: 46px; resize: vertical; background: #0e1116; border: 1px solid var(--line); border-radius: 8px; padding: 8px; }
+  .status { color: var(--ok); font-size: 12px; align-self: center; }
+  .keys { color: var(--muted); font-size: 12px; padding: 0 22px 10px; }
+  .missing { padding: 24px; color: var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Проверка текстов</h1>
+  <p id="paths">Музыка из установленной игры, текст из локальных .lrc. Игру запускать не нужно.</p>
+</header>
+<div class="layout">
+  <aside class="list">
+    <div class="tools">
+      <input id="q" type="search" placeholder="Поиск по номеру, исполнителю, названию">
+      <div class="chips" id="chips">
+        <button type="button" data-filter="all" class="on">Все</button>
+        <button type="button" data-filter="mismatch">Метки не сходятся</button>
+        <button type="button" data-filter="missing">Нет текста</button>
+        <button type="button" data-filter="wrong">Отмеченные</button>
+        <button type="button" data-filter="stunt">Трюковые копии</button>
+      </div>
+    </div>
+    <div class="rows" id="rows"></div>
+  </aside>
+  <main class="stage">
+    <div id="empty" class="missing">Загрузка…</div>
+    <div id="player" hidden>
+      <div class="now">
+        <h2 id="title"></h2>
+        <div class="meta" id="meta"></div>
+        <div class="warnbox" id="warn"></div>
+      </div>
+      <div class="transport">
+        <button type="button" id="prev" title="Предыдущий трек">Пред.</button>
+        <button type="button" id="play" class="primary">Слушать</button>
+        <button type="button" id="next">След.</button>
+        <span class="time" id="time">00:00.00 / 00:00.00</span>
+        <div class="seek">
+          <input id="seek" type="range" min="0" max="1000" value="0">
+          <div class="tick" id="tick" hidden></div>
+        </div>
+        <button type="button" id="fromStart">С начала</button>
+        <button type="button" id="fromStunt" hidden>Как в трюке</button>
+        <label title="После конца трека включить следующий"><input id="autonext" type="checkbox" checked> следующий</label>
+      </div>
+      <div class="lyrics" id="lyrics"></div>
+      <div class="keys">Пробел — пауза, ← → на 5 секунд, ↑ ↓ соседний трек, M — отметить как неправильную. Клик по строке перематывает туда.</div>
+      <div class="review">
+        <button type="button" id="mark" class="danger">Текст неправильный</button>
+        <textarea id="note" placeholder="Что не так: другая песня, съехал припев, не те слова…"></textarea>
+        <div>
+          <button type="button" id="copy">Скопировать отчёт</button>
+          <div class="status" id="status"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<audio id="audio" preload="auto"></audio>
+<script>
+const audio = document.getElementById("audio");
+audio.volume = 0.9;
+const state = { tracks: [], filter: "all", query: "", current: null, lines: [], dragging: false, saveTimer: 0, lastIndex: -2, selectToken: 0 };
+
+function fmt(seconds) {
+  if (!Number.isFinite(seconds) || seconds < 0) seconds = 0;
+  const cs = Math.round(seconds * 100);
+  const mm = Math.floor(cs / 6000);
+  const ss = Math.floor((cs % 6000) / 100);
+  const c = cs % 100;
+  const pad = (n) => String(n).padStart(2, "0");
+  return pad(mm) + ":" + pad(ss) + "." + pad(c);
+}
+
+function visibleTracks() {
+  const q = state.query.trim().toLowerCase();
+  return state.tracks.filter((track) => {
+    if (state.filter === "mismatch" && !track.tagMismatch) return false;
+    if (state.filter === "missing" && track.hasLrc) return false;
+    if (state.filter === "wrong" && !track.wrong) return false;
+    if (state.filter === "stunt" && !track.sameAs && !track.places.some((p) => p.where === "трюки")) return false;
+    if (!q) return true;
+    const hay = [track.file, track.path, track.artist, track.title, track.lrcArtist, track.lrcTitle, track.firstLine].join(" ").toLowerCase();
+    return hay.includes(q);
+  });
+}
+
+function badges(track) {
+  const bits = [];
+  if (track.wrong) bits.push('<span class="badge bad">неправильно</span>');
+  if (!track.hasLrc) bits.push('<span class="badge warn">нет текста</span>');
+  else if (track.tagMismatch) bits.push('<span class="badge warn">другие метки</span>');
+  if (track.sameAs) bits.push('<span class="badge stunt">трюк ' + track.sameAs + "</span>");
+  return bits.join("");
+}
+
+function renderList() {
+  const rows = document.getElementById("rows");
+  const items = visibleTracks();
+  rows.replaceChildren();
+  for (const track of items) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "row" + (state.current && state.current.file === track.file ? " current" : "");
+    const top = document.createElement("div");
+    top.className = "top";
+    const num = document.createElement("span");
+    num.className = "num";
+    num.textContent = track.file;
+    const who = document.createElement("span");
+    who.className = "who";
+    who.textContent = (track.artist || "—") + " — " + (track.title || track.path);
+    top.append(num, who);
+    top.insertAdjacentHTML("beforeend", badges(track));
+    const sub = document.createElement("div");
+    sub.className = "sub";
+    sub.textContent = track.firstLine || track.path;
+    button.append(top, sub);
+    button.addEventListener("click", () => select(track.file, true));
+    rows.append(button);
+  }
+  const marked = state.tracks.filter((t) => t.wrong).length;
+  document.querySelector("[data-filter='wrong']").textContent = "Отмеченные (" + marked + ")";
+}
+
+function parseLrc(text) {
+  let offsetMs = 0;
+  const meta = { ti: "", ar: "" };
+  const raw = [];
+  for (const line of text.split(/\r?\n/)) {
+    const metaTag = line.match(/^\[([A-Za-z]+):(.*)\]\s*$/);
+    if (metaTag) {
+      const key = metaTag[1].toLowerCase();
+      if (key === "ti") meta.ti = metaTag[2].trim();
+      else if (key === "ar") meta.ar = metaTag[2].trim();
+      else if (key === "offset") offsetMs = parseFloat(metaTag[2]) || 0;
+      continue;
+    }
+    let rest = line;
+    const times = [];
+    let match;
+    while ((match = rest.match(/^\[(\d+):(\d+(?:\.\d+)?)\]/))) {
+      times.push(Number(match[1]) * 60 + parseFloat(match[2]));
+      rest = rest.slice(match[0].length);
+    }
+    if (times.length) raw.push({ times, rest });
+  }
+  const offset = offsetMs / 1000;
+  const lines = [];
+  for (const item of raw) {
+    const words = [];
+    const re = /<(\d+):(\d+(?:\.\d+)?)>/g;
+    const found = [];
+    let word;
+    while ((word = re.exec(item.rest))) {
+      found.push({ t: Number(word[1]) * 60 + parseFloat(word[2]) + offset, index: word.index, len: word[0].length });
+    }
+    for (let i = 0; i < found.length; i++) {
+      const start = found[i].index + found[i].len;
+      const end = i + 1 < found.length ? found[i + 1].index : item.rest.length;
+      const piece = item.rest.slice(start, end);
+      if (piece) words.push({ t: Math.max(0, found[i].t), text: piece });
+    }
+    const plain = item.rest.replace(/<\d+:\d+(?:\.\d+)?>/g, "").trim();
+    for (const t of item.times) lines.push({ t: Math.max(0, t + offset), text: plain, words });
+  }
+  lines.sort((a, b) => a.t - b.t);
+  return lines;
+}
+
+function stuntStart(track) {
+  const place = track.places.find((p) => p.where === "трюки" && p.startMs > 0);
+  return place ? place.startMs / 1000 : 0;
+}
+
+async function select(file, autoplay) {
+  const track = state.tracks.find((item) => item.file === file);
+  if (!track) return;
+  const token = ++state.selectToken;
+  state.current = track;
+  state.lastIndex = -2;
+  renderList();
+  document.getElementById("empty").hidden = true;
+  document.getElementById("player").hidden = false;
+  document.getElementById("title").textContent = track.file + "  " + (track.artist || "") + " — " + (track.title || "");
+  const places = track.places.map((p) => p.where + (p.startMs ? " с " + fmt(p.startMs / 1000) : "")).join(", ") || "нет в плейлисте";
+  const same = track.sameAs ? " Трюковая копия " + track.sameAs + " (в игре подписана Henri)." : "";
+  const lrc = track.hasLrc ? ("Текст: " + (track.lrcArtist || "?") + " — " + (track.lrcTitle || "?")) : "Файла .lrc нет.";
+  document.getElementById("meta").textContent = track.path + " · " + places + "." + same + " " + lrc;
+  const warn = document.getElementById("warn");
+  warn.textContent = track.tagMismatch
+    ? "Исполнитель или название в .lrc не совпадают с плейлистом игры."
+    : (track.hasLrc ? "" : "Сначала запусти fetch_lyrics.ps1, затем обнови эту страницу.");
+  const start = stuntStart(track);
+  const stunt = document.getElementById("fromStunt");
+  stunt.hidden = start <= 0;
+  stunt.textContent = "Как в трюке (" + fmt(start) + ")";
+  document.getElementById("mark").classList.toggle("on", track.wrong);
+  document.getElementById("mark").textContent = track.wrong ? "Снять отметку" : "Текст неправильный";
+  document.getElementById("note").value = track.note || "";
+  document.getElementById("lyrics").replaceChildren();
+  state.lines = [];
+  audio.src = "/audio/" + track.file;
+  audio.currentTime = 0;
+  if (autoplay) audio.play().catch(() => {});
+  updatePlayButton();
+  if (!track.hasLrc) {
+    const p = document.createElement("div");
+    p.className = "missing";
+    p.textContent = "Для " + track.file + ".lrc текста нет. Музыку всё равно можно послушать.";
+    document.getElementById("lyrics").append(p);
+    return;
+  }
+  const response = await fetch("/lyrics/" + track.file);
+  if (token !== state.selectToken) return;
+  state.lines = parseLrc(await response.text());
+  paintLyrics(audio.currentTime || 0);
+}
+
+function paintLyrics(now) {
+  const root = document.getElementById("lyrics");
+  if (!state.lines.length) return;
+  if (!state.lines[0]._row || root.childElementCount !== state.lines.length) {
+    root.replaceChildren();
+    for (const line of state.lines) {
+      const row = document.createElement("div");
+      row.className = "lrow";
+      const ts = document.createElement("div");
+      ts.className = "ts";
+      ts.textContent = fmt(line.t);
+      const words = document.createElement("div");
+      words.className = "words";
+      row.append(ts, words);
+      row.addEventListener("click", () => { audio.currentTime = line.t; audio.play().catch(() => {}); });
+      root.append(row);
+      line._row = row;
+      if (!line.text) {
+        const dot = document.createElement("span");
+        dot.className = "empty";
+        dot.textContent = "· · ·";
+        words.append(dot);
+        line._spans = [];
+      } else if (line.words.length) {
+        line._spans = line.words.map((word) => {
+          const span = document.createElement("span");
+          span.className = "w";
+          span.textContent = word.text;
+          words.append(span);
+          return span;
+        });
+      } else {
+        const span = document.createElement("span");
+        span.className = "w";
+        span.textContent = line.text;
+        words.append(span);
+        line._spans = [span];
+      }
+    }
+  }
+  let currentIndex = -1;
+  for (let i = 0; i < state.lines.length; i++) if (state.lines[i].t <= now + 0.05) currentIndex = i;
+  state.lines.forEach((line, index) => {
+    line._row.classList.toggle("current", index === currentIndex);
+    if (line.words.length) {
+      line.words.forEach((word, i) => line._spans[i].classList.toggle("sung", now >= word.t - 0.02));
+    } else if (line._spans.length) {
+      line._spans[0].classList.toggle("sung", now >= line.t - 0.02);
+    }
+  });
+  if (currentIndex !== state.lastIndex) {
+    state.lastIndex = currentIndex;
+    const current = currentIndex >= 0 ? state.lines[currentIndex]._row : null;
+    if (current && !state.dragging) current.scrollIntoView({ block: "center" });
+  }
+}
+
+function updatePlayButton() {
+  document.getElementById("play").textContent = audio.paused ? "Слушать" : "Пауза";
+}
+
+function tick() {
+  const now = audio.currentTime || 0;
+  const dur = audio.duration || 0;
+  document.getElementById("time").textContent = fmt(now) + " / " + (dur ? fmt(dur) : "--:--.--");
+  if (!state.dragging && dur > 0) document.getElementById("seek").value = String(Math.round(now / dur * 1000));
+  const start = state.current ? stuntStart(state.current) : 0;
+  const tickMark = document.getElementById("tick");
+  if (start > 0 && dur > 0) {
+    tickMark.hidden = false;
+    tickMark.style.left = Math.min(100, start / dur * 100) + "%";
+  } else tickMark.hidden = true;
+  if (state.current) paintLyrics(now);
+  if (!audio.paused) requestAnimationFrame(tick);
+}
+
+function step(delta) {
+  const items = visibleTracks();
+  const index = items.findIndex((item) => state.current && item.file === state.current.file);
+  const next = items[index + delta];
+  if (next) select(next.file, true);
+}
+
+function scheduleSave() {
+  clearTimeout(state.saveTimer);
+  state.saveTimer = setTimeout(saveReview, 400);
+}
+
+async function saveReview() {
+  if (!state.current) return;
+  const track = state.current;
+  const wrong = document.getElementById("mark").classList.contains("on");
+  const note = document.getElementById("note").value;
+  const response = await fetch("/api/review", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ file: track.file, wrong, note })
+  });
+  if (!response.ok) {
+    document.getElementById("status").textContent = "Не сохранилось";
+    return;
+  }
+  const saved = await response.json();
+  track.wrong = saved.wrong;
+  track.note = saved.note;
+  document.getElementById("status").textContent = "Сохранено";
+  renderList();
+}
+
+function reportText() {
+  const marked = state.tracks.filter((t) => t.wrong || (t.note && t.note.trim()));
+  if (!marked.length) return "Неправильных текстов пока не отмечено.";
+  const lines = ["Неправильные тексты FlatOut 2:"];
+  for (const track of marked) {
+    lines.push("");
+    lines.push(track.file + " " + track.path);
+    lines.push("игра: " + (track.artist || "?") + " — " + (track.title || "?"));
+    lines.push("lrc: " + (track.lrcArtist || "нет файла") + " — " + (track.lrcTitle || ""));
+    if (track.note && track.note.trim()) lines.push("заметка: " + track.note.trim());
+  }
+  return lines.join("\n");
+}
+
+document.getElementById("play").addEventListener("click", () => {
+  if (audio.paused) audio.play(); else audio.pause();
+});
+document.getElementById("prev").addEventListener("click", () => step(-1));
+document.getElementById("next").addEventListener("click", () => step(1));
+document.getElementById("fromStart").addEventListener("click", () => { audio.currentTime = 0; audio.play(); });
+document.getElementById("fromStunt").addEventListener("click", () => {
+  if (!state.current) return;
+  audio.currentTime = stuntStart(state.current);
+  audio.play();
+});
+document.getElementById("seek").addEventListener("pointerdown", () => { state.dragging = true; });
+document.getElementById("seek").addEventListener("input", () => {
+  const dur = audio.duration || 0;
+  document.getElementById("time").textContent = fmt(dur * document.getElementById("seek").value / 1000) + " / " + fmt(dur);
+});
+document.getElementById("seek").addEventListener("change", () => {
+  const dur = audio.duration || 0;
+  audio.currentTime = dur * document.getElementById("seek").value / 1000;
+  state.dragging = false;
+  paintLyrics(audio.currentTime);
+});
+document.getElementById("q").addEventListener("input", (event) => { state.query = event.target.value; renderList(); });
+document.getElementById("chips").addEventListener("click", (event) => {
+  const button = event.target.closest("button");
+  if (!button) return;
+  state.filter = button.dataset.filter;
+  for (const chip of document.querySelectorAll("#chips button")) chip.classList.toggle("on", chip === button);
+  renderList();
+});
+document.getElementById("mark").addEventListener("click", () => {
+  const button = document.getElementById("mark");
+  button.classList.toggle("on");
+  const on = button.classList.contains("on");
+  button.textContent = on ? "Снять отметку" : "Текст неправильный";
+  saveReview();
+});
+document.getElementById("note").addEventListener("input", scheduleSave);
+document.getElementById("copy").addEventListener("click", async () => {
+  const text = reportText();
+  try {
+    await navigator.clipboard.writeText(text);
+    document.getElementById("status").textContent = "Отчёт скопирован";
+  } catch (error) {
+    window.prompt("Скопируй отчёт:", text);
+  }
+});
+audio.addEventListener("play", () => { updatePlayButton(); requestAnimationFrame(tick); });
+audio.addEventListener("pause", updatePlayButton);
+audio.addEventListener("ended", () => {
+  updatePlayButton();
+  if (document.getElementById("autonext").checked) step(1);
+});
+audio.addEventListener("error", () => {
+  document.getElementById("warn").textContent = "Не удалось проиграть этот .ogg.";
+});
+document.addEventListener("keydown", (event) => {
+  if (event.target.matches("input, textarea")) return;
+  if (event.code === "Space") { event.preventDefault(); audio.paused ? audio.play() : audio.pause(); }
+  else if (event.code === "ArrowLeft") { audio.currentTime = Math.max(0, audio.currentTime - 5); }
+  else if (event.code === "ArrowRight") { audio.currentTime = Math.min(audio.duration || 0, audio.currentTime + 5); }
+  else if (event.code === "ArrowUp") { event.preventDefault(); step(-1); }
+  else if (event.code === "ArrowDown") { event.preventDefault(); step(1); }
+  else if (event.key === "m" || event.key === "M" || event.key === "ь" || event.key === "Ь") document.getElementById("mark").click();
+});
+
+fetch("/api/tracks").then((response) => response.json()).then((data) => {
+  state.tracks = data.tracks;
+  document.getElementById("paths").textContent = "Игра: " + data.game + "  ·  тексты: " + data.lyrics;
+  renderList();
+  document.getElementById("empty").textContent = "Выбери трек слева. Музыка читается из data.bfs, текст подсвечивается по таймингу .lrc.";
+}).catch((error) => {
+  document.getElementById("empty").textContent = "Не удалось загрузить список: " + error;
+});
+</script>
+</body>
+</html>

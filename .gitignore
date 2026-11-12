@@ -3,3 +3,6 @@
 /install/lyrics/
 /lyrics/
 *.lrc
+lyrics-review.json
+__pycache__/
+*.pyc

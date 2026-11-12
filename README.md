@@ -220,8 +220,11 @@ powershell -ExecutionPolicy Bypass -File tools\fetch_lyrics.ps1 -OutDir "C:\Path
 ```
 
 When run from a repository checked out inside the game folder, `-OutDir` defaults to `..\scripts\lyrics`
-(pass `-PlainLineTimings` to omit word-by-word `<mm:ss.xx>` interpolation, or `-Force` to re-fetch). You
-can also place your own `.lrc` files in `scripts\lyrics\`, matched to each track by `[file:]`, by `[ti:]`
+(pass `-PlainLineTimings` to omit word-by-word `<mm:ss.xx>` interpolation, or `-Force` to re-fetch). To hear
+each track against its `.lrc` before starting the game, run `tools\preview_lyrics.cmd` (Python 3). It reads
+the soundtrack out of `data.bfs` — the install has no loose `data\songs1` folder — plays the `.ogg`, and
+highlights the lyrics in time. Mark a song wrong and the note is saved to `lyrics-review.json` next to the
+`.lrc` files. You can also place your own `.lrc` files in `scripts\lyrics\`, matched to each track by `[file:]`, by `[ti:]`
 title and `[ar:]` artist tags, or by file name (`01.lrc` for `data/songs1/01.ogg`, `25.lrc` for
 `data/songs2/25.ogg`).
 
