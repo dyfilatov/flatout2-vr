@@ -66,8 +66,8 @@ $tracks = @(
     # The game .ogg is the same 170s cut plus 1.36s of leading silence, so the album sync was early.
     @{ Files = @("22"); Id = 3846678; Artist = "Fall Out Boy";       Title = "Snitches, and Talkers Get..."; QueryTitle = "Snitches and Talkers Get Stitches and Walkers"; Shift = 1.36 }
     @{ Files = @("24"); Id = 2469681; Artist = "The Vines";          Title = "Don't Listen To The Radio";    QueryTitle = "Don't Listen To The Radio" }
-    # Out of Exile master (20891493). Its first sung line was at 28.13s; in the game file the vocal starts at 23.37s.
-    @{ Files = @("35"); Id = 20891493; Artist = "Audioslave";       Title = "Man Or Animal";                QueryTitle = "Man Or Animal"; Shift = -4.76 }
+    # Out of Exile master (20891493). Its first sung line was at 28.13s; in the game file the vocal starts at 22.37s.
+    @{ Files = @("35"); Id = 20891493; Artist = "Audioslave";       Title = "Man Or Animal";                QueryTitle = "Man Or Animal"; Shift = -5.76 }
     @{ Files = @("36"); Id = 3815807; Artist = "Audioslave";         Title = "Your Time Has Come";           QueryTitle = "Your Time Has Come" }
 )
 $stuntCopies = 25..34 | ForEach-Object { "{0:D2}" -f $_ }
